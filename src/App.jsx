@@ -9,6 +9,12 @@ import PatientProfile from './pages/Patients/PatientProfile'
 import DentalChart from './pages/Patients/DentalChart'
 import AppointmentCalendar from './pages/Appointments/AppointmentCalendar'
 import AppointmentForm from './pages/Appointments/AppointmentForm'
+import TreatmentList from './pages/Treatments/TreatmentList'
+import TreatmentPlanForm from './pages/Treatments/TreatmentPlanForm'
+import TreatmentPlanDetail from './pages/Treatments/TreatmentPlanDetail'
+import InvoiceList from './pages/Billing/InvoiceList'
+import InvoiceForm from './pages/Billing/InvoiceForm'
+import InvoiceDetail from './pages/Billing/InvoiceDetail'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -45,7 +51,12 @@ export default function App() {
         <Route path="/patients/:id/chart" element={<DentalChart />} />
         <Route path="/appointments" element={<AppointmentCalendar />} />
         <Route path="/appointments/new" element={<AppointmentForm />} />
-        {/* هون رح نضيف: /treatments, /billing */}
+        <Route path="/treatments" element={<TreatmentList />} />
+        <Route path="/treatments/new" element={<TreatmentPlanForm />} />
+        <Route path="/treatments/:id" element={<TreatmentPlanDetail />} />
+        <Route path="/billing" element={<InvoiceList />} />
+        <Route path="/billing/new" element={<InvoiceForm />} />
+        <Route path="/billing/:id" element={<InvoiceDetail />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

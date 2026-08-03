@@ -8,6 +8,7 @@
 - [x] AuthContext (تسجيل دخول، جلب role + clinic_id)
 - [x] صفحة تسجيل الدخول (Login.jsx)
 - [x] DashboardLayout + Routing محمي
+- [x] تنظيم بنية المشروع داخل `src/` (كانت الملفات مبعثرة بجذر المشروع) + تصحيح أسماء ملفات الإعداد (`vite.config.js`, `tailwind.config.js`, `postcss.config.js`)
 
 ## 🔲 القادم (بالترتيب المنطقي)
 
@@ -25,15 +26,15 @@
 - [ ] تعديل/إلغاء موعد من نفس الصفحة (حالياً بس إنشاء)
 - [ ] تنبيه تعارض مواعيد (نفس الطبيب بنفس الوقت)
 
-### 3. وحدة الخطط العلاجية (Treatments)
-- [ ] إنشاء خطة علاج لمريض
-- [ ] إضافة بنود علاجية (tooth_number, procedure_name, cost)
-- [ ] تتبع حالة كل بند (planned → in_progress → completed)
+### 3. وحدة الخطط العلاجية (Treatments) ✅ (أساسي)
+- [x] إنشاء خطة علاج لمريض (`TreatmentPlanForm.jsx`)
+- [x] إضافة بنود علاجية (tooth_number, procedure_name, cost) (`TreatmentPlanDetail.jsx`)
+- [x] تتبع حالة كل بند (planned → in_progress → completed)
 
-### 4. وحدة الفوترة (Billing)
-- [ ] إنشاء فاتورة من خطة علاج
-- [ ] تسجيل دفعات (payments)
-- [ ] تقرير حالة الفواتير (مدفوعة / متأخرة)
+### 4. وحدة الفوترة (Billing) ✅ (أساسي)
+- [x] إنشاء فاتورة (اختياري: تعبئة المبلغ تلقائياً من خطة علاج) (`InvoiceForm.jsx`)
+- [x] تسجيل دفعات (payments) (`InvoiceDetail.jsx`)
+- [x] فلترة حالة الفواتير (الكل / مدفوعة / متأخرة) (`InvoiceList.jsx`)
 
 ### 5. إدارة العيادات والمستخدمين (Admin)
 - [ ] صفحة لـ super_admin لإدارة العيادات (clinics)
@@ -47,7 +48,7 @@
 - [ ] مراجعة قانونية GDPR قبل الإطلاق
 
 ### 7. النشر (Deployment)
-- [ ] رفع المشروع على GitHub
+- [x] رفع المشروع على GitHub
 - [ ] اختيار منصة استضافة (Vercel / Netlify)
 - [ ] إعداد Supabase project بمنطقة EU (فرانكفورت)
 - [ ] بيئة staging منفصلة عن production
