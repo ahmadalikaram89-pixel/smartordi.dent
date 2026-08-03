@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Grid3x3, Pencil, Printer, Plus, CalendarX2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import toast from '../../lib/toast'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import { SkeletonList } from '../../components/ui/Skeleton'
+import EmptyState from '../../components/ui/EmptyState'
 
 export default function PatientProfile() {
   const { id } = useParams()
   const [patient, setPatient] = useState(null)
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     loadPatient()
@@ -27,7 +32,7 @@ export default function PatientProfile() {
     ])
 
     if (patientRes.error) {
-      setError('Fehler beim Laden des Patienten: ' + patientRes.error.message)
+      toast.error('Fehler beim Laden des Patienten: ' + patientRes.error.message)
     } else {
       setPatient(patientRes.data)
     }
@@ -35,8 +40,7 @@ export default function PatientProfile() {
     setLoading(false)
   }
 
-  if (loading) return <p className="text-gray-400">Laden...</p>
-  if (error) return <p className="text-red-600 text-sm">{error}</p>
+  if (loading) return <SkeletonList rows={4} />
   if (!patient) return null
 
   return (
@@ -44,22 +48,22 @@ export default function PatientProfile() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">{patient.full_name}</h1>
         <div className="flex gap-3">
-          <Link
-            to={`/patients/${id}/chart`}
-            className="text-sm border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50"
-          >
+          <Button as={Link} to={`/patients/${id}/print`} variant="secondary">
+            <Printer className="h-4 w-4" />
+            Drucken
+          </Button>
+          <Button as={Link} to={`/patients/${id}/chart`} variant="secondary">
+            <Grid3x3 className="h-4 w-4" />
             Zahnschema
-          </Link>
-          <Link
-            to={`/patients/${id}/edit`}
-            className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-          >
+          </Button>
+          <Button as={Link} to={`/patients/${id}/edit`}>
+            <Pencil className="h-4 w-4" />
             Bearbeiten
-          </Link>
+          </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6 grid grid-cols-2 gap-4 text-sm">
+      <Card className="p-6 mb-6 grid grid-cols-2 gap-4 text-sm">
         <div>
           <p className="text-gray-400">Geburtsdatum</p>
           <p className="text-gray-800">{patient.date_of_birth || '—'}</p>
@@ -90,22 +94,23 @@ export default function PatientProfile() {
               : 'Nicht erteilt'}
           </p>
         </div>
-      </div>
+      </Card>
 
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold text-gray-800">Letzte Termine</h2>
         <Link
           to={`/appointments/new?patient_id=${id}`}
-          className="text-sm text-primary-700 hover:underline"
+          className="flex items-center gap-1 text-sm text-primary-700 hover:underline"
         >
-          + Neuer Termin
+          <Plus className="h-3.5 w-3.5" />
+          Neuer Termin
         </Link>
       </div>
 
       {appointments.length === 0 ? (
-        <p className="text-gray-400 bg-white rounded-xl shadow-sm p-6">Keine Termine vorhanden.</p>
+        <EmptyState icon={CalendarX2} title="Keine Termine vorhanden" />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-100">
+        <Card className="divide-y divide-gray-100">
           {appointments.map((a) => (
             <div key={a.id} className="flex items-center justify-between px-5 py-3 text-sm">
               <span className="text-gray-800">
@@ -117,7 +122,7 @@ export default function PatientProfile() {
               <span className="text-gray-500">Dr. {a.user_profiles?.full_name}</span>
             </div>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   )

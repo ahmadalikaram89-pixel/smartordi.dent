@@ -1,6 +1,9 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
+import RequireRole from './components/RequireRole'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import DashboardLayout from './layouts/DashboardLayout'
 import PatientList from './pages/Patients/PatientList'
@@ -15,6 +18,11 @@ import TreatmentPlanDetail from './pages/Treatments/TreatmentPlanDetail'
 import InvoiceList from './pages/Billing/InvoiceList'
 import InvoiceForm from './pages/Billing/InvoiceForm'
 import InvoiceDetail from './pages/Billing/InvoiceDetail'
+import InvoicePrint from './pages/Billing/InvoicePrint'
+import PatientPrint from './pages/Patients/PatientPrint'
+import ClinicList from './pages/Admin/ClinicList'
+import TeamList from './pages/Admin/TeamList'
+const ReportsDashboard = lazy(() => import('./pages/Reports/ReportsDashboard'))
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -35,6 +43,23 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route
+        path="/billing/:id/print"
+        element={
+          <ProtectedRoute>
+            <InvoicePrint />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patients/:id/print"
+        element={
+          <ProtectedRoute>
+            <PatientPrint />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         element={
@@ -51,12 +76,37 @@ export default function App() {
         <Route path="/patients/:id/chart" element={<DentalChart />} />
         <Route path="/appointments" element={<AppointmentCalendar />} />
         <Route path="/appointments/new" element={<AppointmentForm />} />
+        <Route path="/appointments/:id/edit" element={<AppointmentForm />} />
         <Route path="/treatments" element={<TreatmentList />} />
         <Route path="/treatments/new" element={<TreatmentPlanForm />} />
         <Route path="/treatments/:id" element={<TreatmentPlanDetail />} />
         <Route path="/billing" element={<InvoiceList />} />
         <Route path="/billing/new" element={<InvoiceForm />} />
         <Route path="/billing/:id" element={<InvoiceDetail />} />
+        <Route
+          path="/reports"
+          element={
+            <Suspense fallback={<p className="text-gray-400">Laden...</p>}>
+              <ReportsDashboard />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/clinics"
+          element={
+            <RequireRole roles={['super_admin']}>
+              <ClinicList />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/team"
+          element={
+            <RequireRole roles={['super_admin', 'clinic_owner']}>
+              <TeamList />
+            </RequireRole>
+          }
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Users, CalendarClock, Receipt, CalendarX2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import StatCard from '../components/ui/StatCard'
+import Card from '../components/ui/Card'
+import { Skeleton } from '../components/ui/Skeleton'
+import EmptyState from '../components/ui/EmptyState'
 
 function startOfDay(date) {
   const d = new Date(date)
@@ -70,18 +75,9 @@ export default function Dashboard() {
       <p className="text-gray-500 mb-6">Übersicht für heute</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <p className="text-sm text-gray-500 mb-1">Patienten gesamt</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.patients}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <p className="text-sm text-gray-500 mb-1">Termine heute</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.todayAppointments}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <p className="text-sm text-gray-500 mb-1">Offene Rechnungen</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.openInvoices}</p>
-        </div>
+        <StatCard label="Patienten gesamt" value={stats.patients} icon={Users} />
+        <StatCard label="Termine heute" value={stats.todayAppointments} icon={CalendarClock} />
+        <StatCard label="Offene Rechnungen" value={stats.openInvoices} icon={Receipt} />
       </div>
 
       <div className="flex items-center justify-between mb-4">
@@ -92,11 +88,18 @@ export default function Dashboard() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400">Laden...</p>
+        <Card className="divide-y divide-gray-100">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between px-5 py-3">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          ))}
+        </Card>
       ) : upcoming.length === 0 ? (
-        <p className="text-gray-400 bg-white rounded-xl shadow-sm p-6">Keine Termine heute.</p>
+        <EmptyState icon={CalendarX2} title="Keine Termine heute" />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-100">
+        <Card className="divide-y divide-gray-100">
           {upcoming.map((a) => (
             <div key={a.id} className="flex items-center justify-between px-5 py-3">
               <span className="text-sm text-gray-600">
@@ -108,7 +111,7 @@ export default function Dashboard() {
               <span className="font-medium text-gray-800">{a.patients?.full_name}</span>
             </div>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   )

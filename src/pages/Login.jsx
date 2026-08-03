@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, Link } from 'react-router-dom'
+import { Stethoscope } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import Card from '../components/ui/Card'
+import FormField from '../components/ui/FormField'
+import Input from '../components/ui/Input'
+import Button from '../components/ui/Button'
 
 export default function Login() {
   const { user, signIn } = useAuth()
@@ -30,47 +35,53 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-primary-700 text-center mb-6">
-          Smartordi.dent
-        </h1>
-
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="flex flex-col items-center mb-6">
+          <div className="h-12 w-12 rounded-2xl bg-primary-600 flex items-center justify-center mb-3">
+            <Stethoscope className="h-6 w-6 text-white" />
           </div>
+          <h1 className="text-2xl font-bold text-primary-700">Smartordi.dent</h1>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
+        <Card className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <FormField label="E-Mail" htmlFor="email">
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </FormField>
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+            <FormField label="Passwort" htmlFor="password">
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </FormField>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-          >
-            {loading ? 'Anmelden...' : 'Anmelden'}
-          </button>
-        </form>
+            {error && <p className="text-danger-600 text-sm">{error}</p>}
+
+            <Button type="submit" loading={loading} className="w-full">
+              {loading ? 'Anmelden...' : 'Anmelden'}
+            </Button>
+          </form>
+        </Card>
+
+        <p className="text-center text-sm text-gray-500 mt-4">
+          Noch kein Konto?{' '}
+          <Link to="/signup" className="text-primary-700 font-medium hover:underline">
+            Registrieren
+          </Link>
+        </p>
       </div>
     </div>
   )
