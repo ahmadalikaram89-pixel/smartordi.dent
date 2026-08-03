@@ -18,6 +18,8 @@ import TreatmentPlanDetail from './pages/Treatments/TreatmentPlanDetail'
 import InvoiceList from './pages/Billing/InvoiceList'
 import InvoiceForm from './pages/Billing/InvoiceForm'
 import InvoiceDetail from './pages/Billing/InvoiceDetail'
+import InvoicePrint from './pages/Billing/InvoicePrint'
+import PatientPrint from './pages/Patients/PatientPrint'
 import ClinicList from './pages/Admin/ClinicList'
 import TeamList from './pages/Admin/TeamList'
 const ReportsDashboard = lazy(() => import('./pages/Reports/ReportsDashboard'))
@@ -42,6 +44,22 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route
+        path="/billing/:id/print"
+        element={
+          <ProtectedRoute>
+            <InvoicePrint />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patients/:id/print"
+        element={
+          <ProtectedRoute>
+            <PatientPrint />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         element={
