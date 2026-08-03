@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import RequireRole from './components/RequireRole'
@@ -19,6 +20,7 @@ import InvoiceForm from './pages/Billing/InvoiceForm'
 import InvoiceDetail from './pages/Billing/InvoiceDetail'
 import ClinicList from './pages/Admin/ClinicList'
 import TeamList from './pages/Admin/TeamList'
+const ReportsDashboard = lazy(() => import('./pages/Reports/ReportsDashboard'))
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -63,6 +65,14 @@ export default function App() {
         <Route path="/billing" element={<InvoiceList />} />
         <Route path="/billing/new" element={<InvoiceForm />} />
         <Route path="/billing/:id" element={<InvoiceDetail />} />
+        <Route
+          path="/reports"
+          element={
+            <Suspense fallback={<p className="text-gray-400">Laden...</p>}>
+              <ReportsDashboard />
+            </Suspense>
+          }
+        />
         <Route
           path="/admin/clinics"
           element={
