@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Plus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import toast from '../../lib/toast'
+import Card from '../../components/ui/Card'
+import Select from '../../components/ui/Select'
+import Input from '../../components/ui/Input'
+import Button from '../../components/ui/Button'
+import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/Table'
+import { SkeletonList } from '../../components/ui/Skeleton'
 
 const PLAN_STATUS_OPTIONS = ['planned', 'in_progress', 'completed', 'cancelled']
 const ITEM_STATUS_OPTIONS = ['planned', 'in_progress', 'completed', 'cancelled']
@@ -39,7 +47,7 @@ export default function TreatmentPlanDetail() {
     ])
 
     if (planRes.error) {
-      setError('Fehler beim Laden: ' + planRes.error.message)
+      toast.error('Fehler beim Laden: ' + planRes.error.message)
     } else {
       setPlan(planRes.data)
     }
@@ -49,7 +57,11 @@ export default function TreatmentPlanDetail() {
 
   async function updatePlanStatus(status) {
     const { error } = await supabase.from('treatment_plans').update({ status }).eq('id', id)
-    if (!error) setPlan((p) => ({ ...p, status }))
+    if (error) {
+      toast.error('Fehler beim Aktualisieren: ' + error.message)
+    } else {
+      setPlan((p) => ({ ...p, status }))
+    }
   }
 
   async function updateItemStatus(itemId, status) {
@@ -58,7 +70,9 @@ export default function TreatmentPlanDetail() {
       .from('treatment_items')
       .update({ status, completed_date })
       .eq('id', itemId)
-    if (!error) {
+    if (error) {
+      toast.error('Fehler beim Aktualisieren: ' + error.message)
+    } else {
       setItems((list) => list.map((it) => (it.id === itemId ? { ...it, status, completed_date } : it)))
     }
   }
@@ -95,22 +109,27 @@ export default function TreatmentPlanDetail() {
     setSavingItem(false)
 
     if (error) {
-      setError('Fehler beim Speichern: ' + error.message)
+      toast.error('Fehler beim Speichern: ' + error.message)
     } else {
       setItems((list) => [...list, data])
       setNewItem(EMPTY_ITEM)
+      toast.success('Behandlungsposition hinzugefügt.')
     }
   }
 
-  if (loading) return <p className="text-gray-400">Laden...</p>
+  if (loading) return <SkeletonList rows={4} />
   if (!plan) return null
 
   const totalCost = items.reduce((sum, it) => sum + (Number(it.cost) || 0), 0)
 
   return (
     <div className="max-w-3xl">
-      <Link to="/treatments" className="text-sm text-gray-500 hover:underline">
-        ← Zurück zu Behandlungsplänen
+      <Link
+        to="/treatments"
+        className="flex items-center gap-1 text-sm text-gray-500 hover:underline w-fit"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Zurück zu Behandlungsplänen
       </Link>
 
       <div className="flex items-center justify-between mt-2 mb-6">
@@ -122,136 +141,120 @@ export default function TreatmentPlanDetail() {
           </p>
         </div>
 
-        <select
+        <Select
           value={plan.status}
           onChange={(e) => updatePlanStatus(e.target.value)}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+          className="w-auto"
         >
           {PLAN_STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
               {STATUS_LABELS[s]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-left">
+      <Table className="mb-6">
+        <THead>
+          <tr>
+            <TH>Zahn</TH>
+            <TH>Behandlung</TH>
+            <TH>Kosten (€)</TH>
+            <TH>Termin</TH>
+            <TH>Status</TH>
+          </tr>
+        </THead>
+        <TBody>
+          {items.map((it) => (
+            <TR key={it.id}>
+              <TD>{it.tooth_number || '—'}</TD>
+              <TD className="text-gray-800">{it.procedure_name}</TD>
+              <TD>{it.cost != null ? Number(it.cost).toFixed(2) : '—'}</TD>
+              <TD>{it.scheduled_date || '—'}</TD>
+              <TD>
+                <Select
+                  value={it.status}
+                  onChange={(e) => updateItemStatus(it.id, e.target.value)}
+                  className="w-auto text-xs py-1"
+                >
+                  {ITEM_STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABELS[s]}
+                    </option>
+                  ))}
+                </Select>
+              </TD>
+            </TR>
+          ))}
+          {items.length === 0 && (
             <tr>
-              <th className="px-4 py-3 font-medium">Zahn</th>
-              <th className="px-4 py-3 font-medium">Behandlung</th>
-              <th className="px-4 py-3 font-medium">Kosten (€)</th>
-              <th className="px-4 py-3 font-medium">Termin</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                Noch keine Behandlungspositionen.
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {items.map((it) => (
-              <tr key={it.id}>
-                <td className="px-4 py-3 text-gray-600">{it.tooth_number || '—'}</td>
-                <td className="px-4 py-3 text-gray-800">{it.procedure_name}</td>
-                <td className="px-4 py-3 text-gray-600">
-                  {it.cost != null ? Number(it.cost).toFixed(2) : '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-600">{it.scheduled_date || '—'}</td>
-                <td className="px-4 py-3">
-                  <select
-                    value={it.status}
-                    onChange={(e) => updateItemStatus(it.id, e.target.value)}
-                    className="text-xs border border-gray-300 rounded-lg px-2 py-1"
-                  >
-                    {ITEM_STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_LABELS[s]}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
-                  Noch keine Behandlungspositionen.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          {items.length > 0 && (
-            <tfoot>
-              <tr className="border-t border-gray-100">
-                <td colSpan={2} className="px-4 py-3 text-right font-medium text-gray-600">
-                  Gesamt
-                </td>
-                <td className="px-4 py-3 font-medium text-gray-800">{totalCost.toFixed(2)}</td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
           )}
-        </table>
-      </div>
+        </TBody>
+        {items.length > 0 && (
+          <tfoot>
+            <tr className="border-t border-gray-100">
+              <td colSpan={2} className="px-4 py-3 text-right font-medium text-gray-600">
+                Gesamt
+              </td>
+              <td className="px-4 py-3 font-medium text-gray-800">{totalCost.toFixed(2)}</td>
+              <td colSpan={2} />
+            </tr>
+          </tfoot>
+        )}
+      </Table>
 
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <Card className="p-6">
         <h3 className="font-semibold text-gray-800 mb-4">Behandlungsposition hinzufügen</h3>
         <form onSubmit={handleAddItem} className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Zahn Nr.</label>
-            <input
+            <Input
               type="number"
               min="1"
               max="32"
               name="tooth_number"
               value={newItem.tooth_number}
               onChange={handleNewItemChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="col-span-2 sm:col-span-1">
             <label className="block text-xs font-medium text-gray-700 mb-1">Behandlung *</label>
-            <input
-              type="text"
-              name="procedure_name"
-              value={newItem.procedure_name}
-              onChange={handleNewItemChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+            <Input name="procedure_name" value={newItem.procedure_name} onChange={handleNewItemChange} />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Kosten (€)</label>
-            <input
+            <Input
               type="number"
               step="0.01"
               min="0"
               name="cost"
               value={newItem.cost}
               onChange={handleNewItemChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Termin</label>
-            <input
+            <Input
               type="date"
               name="scheduled_date"
               value={newItem.scheduled_date}
               onChange={handleNewItemChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="col-span-2 sm:col-span-4">
-            <button
-              type="submit"
-              disabled={savingItem}
-              className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition disabled:opacity-50"
-            >
-              {savingItem ? 'Speichern...' : '+ Position hinzufügen'}
-            </button>
+            <Button type="submit" loading={savingItem} size="sm">
+              <Plus className="h-4 w-4" />
+              Position hinzufügen
+            </Button>
           </div>
         </form>
 
-        {error && <p className="text-red-600 text-sm mt-3">{error}</p>}
-      </div>
+        {error && <p className="text-danger-600 text-sm mt-3">{error}</p>}
+      </Card>
     </div>
   )
 }

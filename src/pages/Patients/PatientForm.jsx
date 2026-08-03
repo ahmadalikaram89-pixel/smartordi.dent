@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import toast from '../../lib/toast'
+import Card from '../../components/ui/Card'
+import FormField from '../../components/ui/FormField'
+import Input from '../../components/ui/Input'
+import Textarea from '../../components/ui/Textarea'
+import Button from '../../components/ui/Button'
+import { SkeletonList } from '../../components/ui/Skeleton'
 
 const EMPTY_FORM = {
   full_name: '',
@@ -22,7 +29,7 @@ export default function PatientForm() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [validationError, setValidationError] = useState('')
 
   useEffect(() => {
     if (isEdit) loadPatient()
@@ -33,7 +40,7 @@ export default function PatientForm() {
     const { data, error } = await supabase.from('patients').select('*').eq('id', id).single()
 
     if (error) {
-      setError('Fehler beim Laden des Patienten: ' + error.message)
+      toast.error('Fehler beim Laden des Patienten: ' + error.message)
     } else {
       setForm({
         full_name: data.full_name || '',
@@ -55,15 +62,15 @@ export default function PatientForm() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setError('')
+    setValidationError('')
 
     if (!form.full_name) {
-      setError('Bitte Name eingeben.')
+      setValidationError('Bitte Name eingeben.')
       return
     }
 
     if (!form.consent_given) {
-      setError('Die Einwilligung des Patienten (Consent) ist erforderlich.')
+      setValidationError('Die Einwilligung des Patienten (Consent) ist erforderlich.')
       return
     }
 
@@ -84,13 +91,14 @@ export default function PatientForm() {
     setSaving(false)
 
     if (error) {
-      setError('Fehler beim Speichern: ' + error.message)
+      toast.error('Fehler beim Speichern: ' + error.message)
     } else {
+      toast.success(isEdit ? 'Patient aktualisiert.' : 'Patient angelegt.')
       navigate('/patients')
     }
   }
 
-  if (loading) return <p className="text-gray-400">Laden...</p>
+  if (loading) return <SkeletonList rows={4} />
 
   return (
     <div className="max-w-lg">
@@ -98,110 +106,72 @@ export default function PatientForm() {
         {isEdit ? 'Patient bearbeiten' : 'Neuer Patient'}
       </h1>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Vollständiger Name *</label>
-          <input
-            type="text"
-            name="full_name"
-            value={form.full_name}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
+      <Card className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Vollständiger Name" htmlFor="full_name" required>
+            <Input id="full_name" name="full_name" value={form.full_name} onChange={handleChange} />
+          </FormField>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
-            <input
-              type="date"
-              name="date_of_birth"
-              value={form.date_of_birth}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Geburtsdatum" htmlFor="date_of_birth">
+              <Input
+                id="date_of_birth"
+                type="date"
+                name="date_of_birth"
+                value={form.date_of_birth}
+                onChange={handleChange}
+              />
+            </FormField>
+            <FormField label="Telefon" htmlFor="phone">
+              <Input id="phone" type="tel" name="phone" value={form.phone} onChange={handleChange} />
+            </FormField>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <input
-              type="tel"
-              name="phone"
-              value={form.phone}
+
+          <FormField label="E-Mail" htmlFor="email">
+            <Input id="email" type="email" name="email" value={form.email} onChange={handleChange} />
+          </FormField>
+
+          <FormField label="Adresse" htmlFor="address">
+            <Input id="address" name="address" value={form.address} onChange={handleChange} />
+          </FormField>
+
+          <FormField label="Krankengeschichte (Allergien, Vorerkrankungen...)" htmlFor="medical_history">
+            <Textarea
+              id="medical_history"
+              name="medical_history"
+              value={form.medical_history}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              rows={3}
             />
+          </FormField>
+
+          <div className="flex items-start gap-2 bg-gray-50 rounded-lg p-3">
+            <input
+              type="checkbox"
+              id="consent_given"
+              name="consent_given"
+              checked={form.consent_given}
+              onChange={handleChange}
+              className="mt-1"
+            />
+            <label htmlFor="consent_given" className="text-sm text-gray-700">
+              Der/die Patient:in hat der Verarbeitung seiner/ihrer Gesundheitsdaten gemäß DSGVO
+              (Art. 9) ausdrücklich zugestimmt. *
+            </label>
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
+          {validationError && <p className="text-danger-600 text-sm">{validationError}</p>}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-          <input
-            type="text"
-            name="address"
-            value={form.address}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Krankengeschichte (Allergien, Vorerkrankungen...)
-          </label>
-          <textarea
-            name="medical_history"
-            value={form.medical_history}
-            onChange={handleChange}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-
-        <div className="flex items-start gap-2 bg-gray-50 rounded-lg p-3">
-          <input
-            type="checkbox"
-            id="consent_given"
-            name="consent_given"
-            checked={form.consent_given}
-            onChange={handleChange}
-            className="mt-1"
-          />
-          <label htmlFor="consent_given" className="text-sm text-gray-700">
-            Der/die Patient:in hat der Verarbeitung seiner/ihrer Gesundheitsdaten gemäß DSGVO
-            (Art. 9) ausdrücklich zugestimmt. *
-          </label>
-        </div>
-
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2 rounded-lg transition disabled:opacity-50"
-          >
-            {saving ? 'Speichern...' : 'Speichern'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/patients')}
-            className="text-gray-500 hover:text-gray-700 px-5 py-2"
-          >
-            Abbrechen
-          </button>
-        </div>
-      </form>
+          <div className="flex gap-3 pt-2">
+            <Button type="submit" loading={saving}>
+              {saving ? 'Speichern...' : 'Speichern'}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => navigate('/patients')}>
+              Abbrechen
+            </Button>
+          </div>
+        </form>
+      </Card>
     </div>
   )
 }

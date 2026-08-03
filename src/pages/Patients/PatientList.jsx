@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Plus, Search, Users, AlertTriangle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import PageHeader from '../../components/ui/PageHeader'
+import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
+import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/Table'
+import { SkeletonTable } from '../../components/ui/Skeleton'
+import EmptyState from '../../components/ui/EmptyState'
 
 export default function PatientList() {
   const { clinicId } = useAuth()
@@ -16,6 +23,7 @@ export default function PatientList() {
 
   async function loadPatients() {
     setLoading(true)
+    setError('')
     const { data, error } = await supabase
       .from('patients')
       .select('id, full_name, phone, date_of_birth')
@@ -36,65 +44,77 @@ export default function PatientList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Patienten</h1>
-        <Link
-          to="/patients/new"
-          className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-        >
-          + Neuer Patient
-        </Link>
-      </div>
-
-      <input
-        type="text"
-        placeholder="Patient suchen..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full max-w-sm mb-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+      <PageHeader
+        title="Patienten"
+        action={
+          <Button as={Link} to="/patients/new">
+            <Plus className="h-4 w-4" />
+            Neuer Patient
+          </Button>
+        }
       />
 
-      {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+      <div className="relative max-w-sm mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          type="text"
+          placeholder="Patient suchen..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
 
       {loading ? (
-        <p className="text-gray-400">Laden...</p>
+        <SkeletonTable rows={5} cols={3} />
+      ) : error ? (
+        <EmptyState
+          icon={AlertTriangle}
+          tone="danger"
+          title="Patienten konnten nicht geladen werden"
+          description={error}
+          action={
+            <Button variant="secondary" onClick={loadPatients}>
+              Erneut versuchen
+            </Button>
+          }
+        />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-left">
+        <Table>
+          <THead>
+            <tr>
+              <TH>Name</TH>
+              <TH>Telefon</TH>
+              <TH>Geburtsdatum</TH>
+            </tr>
+          </THead>
+          <TBody>
+            {filtered.map((p) => (
+              <TR key={p.id}>
+                <TD>
+                  <Link
+                    to={`/patients/${p.id}`}
+                    className="text-primary-700 font-medium hover:underline"
+                  >
+                    {p.full_name}
+                  </Link>
+                </TD>
+                <TD>{p.phone || '—'}</TD>
+                <TD>{p.date_of_birth || '—'}</TD>
+              </TR>
+            ))}
+            {filtered.length === 0 && (
               <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Telefon</th>
-                <th className="px-4 py-3 font-medium">Geburtsdatum</th>
+                <td colSpan={3} className="px-4 py-10">
+                  <div className="flex flex-col items-center text-gray-400">
+                    <Users className="h-8 w-8 mb-2" />
+                    <p>Keine Patienten gefunden.</p>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/patients/${p.id}`}
-                      className="text-primary-700 font-medium hover:underline"
-                    >
-                      {p.full_name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{p.phone || '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {p.date_of_birth || '—'}
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-gray-400">
-                    Keine Patienten gefunden.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            )}
+          </TBody>
+        </Table>
       )}
     </div>
   )

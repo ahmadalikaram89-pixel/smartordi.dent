@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Plus, Receipt } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import PageHeader from '../../components/ui/PageHeader'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
+import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/Table'
+import { SkeletonTable } from '../../components/ui/Skeleton'
+import EmptyState from '../../components/ui/EmptyState'
 
 const STATUS_LABELS = {
-  draft: { label: 'Entwurf', color: 'bg-gray-100 text-gray-600' },
-  sent: { label: 'Gesendet', color: 'bg-blue-100 text-blue-700' },
-  paid: { label: 'Bezahlt', color: 'bg-green-100 text-green-700' },
-  partial: { label: 'Teilweise bezahlt', color: 'bg-yellow-100 text-yellow-700' },
-  overdue: { label: 'Überfällig', color: 'bg-red-100 text-red-700' },
-  cancelled: { label: 'Storniert', color: 'bg-gray-100 text-gray-400' },
+  draft: { label: 'Entwurf', tone: 'neutral' },
+  sent: { label: 'Gesendet', tone: 'info' },
+  paid: { label: 'Bezahlt', tone: 'success' },
+  partial: { label: 'Teilweise bezahlt', tone: 'warning' },
+  overdue: { label: 'Überfällig', tone: 'danger' },
+  cancelled: { label: 'Storniert', tone: 'neutral' },
 }
 
 const FILTERS = [
@@ -52,15 +59,15 @@ export default function InvoiceList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Abrechnung</h1>
-        <Link
-          to="/billing/new"
-          className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-        >
-          + Neue Rechnung
-        </Link>
-      </div>
+      <PageHeader
+        title="Abrechnung"
+        action={
+          <Button as={Link} to="/billing/new">
+            <Plus className="h-4 w-4" />
+            Neue Rechnung
+          </Button>
+        }
+      />
 
       <div className="flex gap-2 mb-4">
         {FILTERS.map((f) => (
@@ -70,7 +77,7 @@ export default function InvoiceList() {
             className={`text-sm px-3 py-1.5 rounded-lg border transition ${
               filter === f.value
                 ? 'bg-primary-600 text-white border-primary-600'
-                : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50 bg-white'
             }`}
           >
             {f.label}
@@ -79,48 +86,44 @@ export default function InvoiceList() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400">Laden...</p>
+        <SkeletonTable rows={5} cols={5} />
       ) : filtered.length === 0 ? (
-        <p className="text-gray-400 bg-white rounded-xl shadow-sm p-6">Keine Rechnungen gefunden.</p>
+        <EmptyState icon={Receipt} title="Keine Rechnungen gefunden" />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">Rechnungsnr.</th>
-                <th className="px-4 py-3 font-medium">Patient</th>
-                <th className="px-4 py-3 font-medium">Betrag (€)</th>
-                <th className="px-4 py-3 font-medium">Fällig am</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((inv) => {
-                const statusMeta = STATUS_LABELS[inv.status] || STATUS_LABELS.draft
-                return (
-                  <tr key={inv.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/billing/${inv.id}`}
-                        className="text-primary-700 font-medium hover:underline"
-                      >
-                        {inv.invoice_number}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{inv.patients?.full_name}</td>
-                    <td className="px-4 py-3 text-gray-600">{Number(inv.total_amount).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-gray-600">{inv.due_date || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusMeta.color}`}>
-                        {statusMeta.label}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <THead>
+            <tr>
+              <TH>Rechnungsnr.</TH>
+              <TH>Patient</TH>
+              <TH>Betrag (€)</TH>
+              <TH>Fällig am</TH>
+              <TH>Status</TH>
+            </tr>
+          </THead>
+          <TBody>
+            {filtered.map((inv) => {
+              const statusMeta = STATUS_LABELS[inv.status] || STATUS_LABELS.draft
+              return (
+                <TR key={inv.id}>
+                  <TD>
+                    <Link
+                      to={`/billing/${inv.id}`}
+                      className="text-primary-700 font-medium hover:underline"
+                    >
+                      {inv.invoice_number}
+                    </Link>
+                  </TD>
+                  <TD>{inv.patients?.full_name}</TD>
+                  <TD>{Number(inv.total_amount).toFixed(2)}</TD>
+                  <TD>{inv.due_date || '—'}</TD>
+                  <TD>
+                    <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                  </TD>
+                </TR>
+              )
+            })}
+          </TBody>
+        </Table>
       )}
     </div>
   )

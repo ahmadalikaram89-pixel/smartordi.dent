@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
+import toast from '../../lib/toast'
+import Card from '../../components/ui/Card'
+import FormField from '../../components/ui/FormField'
+import Select from '../../components/ui/Select'
+import Input from '../../components/ui/Input'
+import Textarea from '../../components/ui/Textarea'
+import Button from '../../components/ui/Button'
+import { SkeletonList } from '../../components/ui/Skeleton'
 
 export default function AppointmentForm() {
+  const { id } = useParams()
+  const isEdit = Boolean(id)
   const { clinicId } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -18,12 +28,17 @@ export default function AppointmentForm() {
     duration: '30', // بالدقايق
     notes: '',
   })
+  const [loading, setLoading] = useState(isEdit)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (clinicId) loadOptions()
   }, [clinicId])
+
+  useEffect(() => {
+    if (isEdit && clinicId) loadAppointment()
+  }, [id, clinicId])
 
   async function loadOptions() {
     const [patientsRes, dentistsRes] = await Promise.all([
@@ -42,6 +57,32 @@ export default function AppointmentForm() {
 
     if (!patientsRes.error) setPatients(patientsRes.data)
     if (!dentistsRes.error) setDentists(dentistsRes.data)
+  }
+
+  async function loadAppointment() {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('patient_id, dentist_id, start_time, end_time, notes')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      toast.error('Fehler beim Laden des Termins: ' + error.message)
+    } else {
+      const start = new Date(data.start_time)
+      const end = new Date(data.end_time)
+      const durationMinutes = Math.round((end - start) / 60000)
+      setForm({
+        patient_id: data.patient_id,
+        dentist_id: data.dentist_id || '',
+        date: start.toISOString().slice(0, 10),
+        start_time: start.toTimeString().slice(0, 5),
+        duration: String(durationMinutes),
+        notes: data.notes || '',
+      })
+    }
+    setLoading(false)
   }
 
   function handleChange(e) {
@@ -63,133 +104,131 @@ export default function AppointmentForm() {
 
     setSaving(true)
 
-    const { error } = await supabase.from('appointments').insert({
-      clinic_id: clinicId,
+    let conflictQuery = supabase
+      .from('appointments')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('dentist_id', form.dentist_id)
+      .neq('status', 'cancelled')
+      .lt('start_time', endDateTime.toISOString())
+      .gt('end_time', startDateTime.toISOString())
+
+    if (isEdit) conflictQuery = conflictQuery.neq('id', id)
+
+    const { data: conflicts, error: conflictError } = await conflictQuery
+
+    if (conflictError) {
+      setSaving(false)
+      toast.error('Fehler bei der Terminprüfung: ' + conflictError.message)
+      return
+    }
+
+    if (conflicts?.length > 0) {
+      setSaving(false)
+      setError('Dieser Zahnarzt/diese Zahnärztin hat zu dieser Zeit bereits einen Termin.')
+      return
+    }
+
+    const payload = {
       patient_id: form.patient_id,
       dentist_id: form.dentist_id,
       start_time: startDateTime.toISOString(),
       end_time: endDateTime.toISOString(),
       notes: form.notes,
-      status: 'scheduled',
-    })
+    }
+
+    let error
+    if (isEdit) {
+      ;({ error } = await supabase.from('appointments').update(payload).eq('id', id))
+    } else {
+      ;({ error } = await supabase
+        .from('appointments')
+        .insert({ ...payload, clinic_id: clinicId, status: 'scheduled' }))
+    }
 
     setSaving(false)
 
     if (error) {
-      setError('Fehler beim Speichern: ' + error.message)
+      toast.error('Fehler beim Speichern: ' + error.message)
     } else {
+      toast.success(isEdit ? 'Termin aktualisiert.' : 'Termin angelegt.')
       navigate('/appointments')
     }
   }
 
+  if (loading) return <SkeletonList rows={4} />
+
   return (
     <div className="max-w-lg">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Neuer Termin</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        {isEdit ? 'Termin bearbeiten' : 'Neuer Termin'}
+      </h1>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Patient *</label>
-          <select
-            name="patient_id"
-            value={form.patient_id}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">Bitte wählen...</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <Card className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Patient" htmlFor="patient_id" required>
+            <Select id="patient_id" name="patient_id" value={form.patient_id} onChange={handleChange}>
+              <option value="">Bitte wählen...</option>
+              {patients.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Zahnarzt/-ärztin *</label>
-          <select
-            name="dentist_id"
-            value={form.dentist_id}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">Bitte wählen...</option>
-            {dentists.map((d) => (
-              <option key={d.id} value={d.id}>
-                Dr. {d.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <FormField label="Zahnarzt/-ärztin" htmlFor="dentist_id" required>
+            <Select id="dentist_id" name="dentist_id" value={form.dentist_id} onChange={handleChange}>
+              <option value="">Bitte wählen...</option>
+              {dentists.map((d) => (
+                <option key={d.id} value={d.id}>
+                  Dr. {d.full_name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Datum *</label>
-            <input
-              type="date"
-              name="date"
-              value={form.date}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Datum" htmlFor="date" required>
+              <Input id="date" type="date" name="date" value={form.date} onChange={handleChange} />
+            </FormField>
+            <FormField label="Uhrzeit" htmlFor="start_time" required>
+              <Input
+                id="start_time"
+                type="time"
+                name="start_time"
+                value={form.start_time}
+                onChange={handleChange}
+              />
+            </FormField>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit *</label>
-            <input
-              type="time"
-              name="start_time"
-              value={form.start_time}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+
+          <FormField label="Dauer" htmlFor="duration">
+            <Select id="duration" name="duration" value={form.duration} onChange={handleChange}>
+              <option value="15">15 Minuten</option>
+              <option value="30">30 Minuten</option>
+              <option value="45">45 Minuten</option>
+              <option value="60">60 Minuten</option>
+              <option value="90">90 Minuten</option>
+            </Select>
+          </FormField>
+
+          <FormField label="Notizen" htmlFor="notes">
+            <Textarea id="notes" name="notes" value={form.notes} onChange={handleChange} rows={2} />
+          </FormField>
+
+          {error && <p className="text-danger-600 text-sm">{error}</p>}
+
+          <div className="flex gap-3 pt-2">
+            <Button type="submit" loading={saving}>
+              {saving ? 'Speichern...' : 'Termin speichern'}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => navigate('/appointments')}>
+              Abbrechen
+            </Button>
           </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Dauer</label>
-          <select
-            name="duration"
-            value={form.duration}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="15">15 Minuten</option>
-            <option value="30">30 Minuten</option>
-            <option value="45">45 Minuten</option>
-            <option value="60">60 Minuten</option>
-            <option value="90">90 Minuten</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
-          <textarea
-            name="notes"
-            value={form.notes}
-            onChange={handleChange}
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2 rounded-lg transition disabled:opacity-50"
-          >
-            {saving ? 'Speichern...' : 'Termin speichern'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/appointments')}
-            className="text-gray-500 hover:text-gray-700 px-5 py-2"
-          >
-            Abbrechen
-          </button>
-        </div>
-      </form>
+        </form>
+      </Card>
     </div>
   )
 }

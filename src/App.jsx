@@ -51,6 +51,7 @@ export default function App() {
         <Route path="/patients/:id/chart" element={<DentalChart />} />
         <Route path="/appointments" element={<AppointmentCalendar />} />
         <Route path="/appointments/new" element={<AppointmentForm />} />
+        <Route path="/appointments/:id/edit" element={<AppointmentForm />} />
         <Route path="/treatments" element={<TreatmentList />} />
         <Route path="/treatments/new" element={<TreatmentPlanForm />} />
         <Route path="/treatments/:id" element={<TreatmentPlanDetail />} />
