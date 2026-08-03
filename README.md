@@ -27,10 +27,10 @@ src/
   ├─ pages/
   │   ├─ Login.jsx
   │   ├─ Dashboard.jsx
-  │   ├─ Patients/            # (قيد الإنشاء)
-  │   ├─ Appointments/        # (قيد الإنشاء)
-  │   ├─ Treatments/          # (قيد الإنشاء)
-  │   └─ Billing/             # (قيد الإنشاء)
+  │   ├─ Patients/            # PatientList, PatientForm, PatientProfile, DentalChart
+  │   ├─ Appointments/        # AppointmentCalendar, AppointmentForm
+  │   ├─ Treatments/          # TreatmentList, TreatmentPlanForm, TreatmentPlanDetail
+  │   └─ Billing/             # InvoiceList, InvoiceForm, InvoiceDetail
   └─ App.jsx                  # Routing
 ```
 
@@ -45,7 +45,7 @@ src/
 ## خطوات التشغيل
 
 1. `npm install`
-2. انسخي `.env.example` إلى `.env` وحطي بيانات مشروع Supabase تبعك:
+2. انسخ `.env.example` إلى `.env` وحط بيانات مشروع Supabase تبعك:
    ```
    VITE_SUPABASE_URL=...
    VITE_SUPABASE_ANON_KEY=...
