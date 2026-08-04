@@ -11,6 +11,21 @@ import Textarea from '../../components/ui/Textarea'
 import Button from '../../components/ui/Button'
 import { SkeletonList } from '../../components/ui/Skeleton'
 
+export const APPOINTMENT_REASONS = [
+  'Kontrolluntersuchung',
+  'Beratung',
+  'Zahnreinigung',
+  'Schmerzbehandlung',
+  'Füllung',
+  'Wurzelbehandlung',
+  'Zahnextraktion',
+  'Zahnersatz / Prothetik',
+  'Kieferorthopädie',
+  'Nachkontrolle',
+  'Notfall',
+  'Sonstiges',
+]
+
 export default function AppointmentForm() {
   const { id } = useParams()
   const isEdit = Boolean(id)
@@ -26,6 +41,7 @@ export default function AppointmentForm() {
     date: '',
     start_time: '',
     duration: '30', // بالدقايق
+    reason: '',
     notes: '',
   })
   const [loading, setLoading] = useState(isEdit)
@@ -63,7 +79,7 @@ export default function AppointmentForm() {
     setLoading(true)
     const { data, error } = await supabase
       .from('appointments')
-      .select('patient_id, dentist_id, start_time, end_time, notes')
+      .select('patient_id, dentist_id, start_time, end_time, reason, notes')
       .eq('id', id)
       .single()
 
@@ -79,6 +95,7 @@ export default function AppointmentForm() {
         date: start.toISOString().slice(0, 10),
         start_time: start.toTimeString().slice(0, 5),
         duration: String(durationMinutes),
+        reason: data.reason || '',
         notes: data.notes || '',
       })
     }
@@ -134,6 +151,7 @@ export default function AppointmentForm() {
       dentist_id: form.dentist_id,
       start_time: startDateTime.toISOString(),
       end_time: endDateTime.toISOString(),
+      reason: form.reason || null,
       notes: form.notes,
     }
 
@@ -210,6 +228,17 @@ export default function AppointmentForm() {
               <option value="45">45 Minuten</option>
               <option value="60">60 Minuten</option>
               <option value="90">90 Minuten</option>
+            </Select>
+          </FormField>
+
+          <FormField label="Grund des Termins" htmlFor="reason">
+            <Select id="reason" name="reason" value={form.reason} onChange={handleChange}>
+              <option value="">Bitte wählen...</option>
+              {APPOINTMENT_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </Select>
           </FormField>
 
