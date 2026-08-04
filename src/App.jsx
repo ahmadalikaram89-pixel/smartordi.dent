@@ -10,6 +10,7 @@ import PatientList from './pages/Patients/PatientList'
 import PatientForm from './pages/Patients/PatientForm'
 import PatientProfile from './pages/Patients/PatientProfile'
 import DentalChart from './pages/Patients/DentalChart'
+import PatientImages from './pages/Patients/PatientImages'
 import AppointmentCalendar from './pages/Appointments/AppointmentCalendar'
 import AppointmentForm from './pages/Appointments/AppointmentForm'
 import TreatmentList from './pages/Treatments/TreatmentList'
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="/patients/:id" element={<PatientProfile />} />
         <Route path="/patients/:id/edit" element={<PatientForm />} />
         <Route path="/patients/:id/chart" element={<DentalChart />} />
+        <Route path="/patients/:id/images" element={<PatientImages />} />
         <Route path="/appointments" element={<AppointmentCalendar />} />
         <Route path="/appointments/new" element={<AppointmentForm />} />
         <Route path="/appointments/:id/edit" element={<AppointmentForm />} />
