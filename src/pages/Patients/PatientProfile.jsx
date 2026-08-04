@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Grid3x3, Pencil, Printer, Plus, CalendarX2, Images } from 'lucide-react'
+import { Grid3x3, Pencil, Printer, Plus, CalendarX2, FolderOpen } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from '../../lib/toast'
 import Card from '../../components/ui/Card'
@@ -57,8 +57,8 @@ export default function PatientProfile() {
             Zahnschema
           </Button>
           <Button as={Link} to={`/patients/${id}/images`} variant="secondary">
-            <Images className="h-4 w-4" />
-            Bilder
+            <FolderOpen className="h-4 w-4" />
+            Dateien
           </Button>
           <Button as={Link} to={`/patients/${id}/edit`}>
             <Pencil className="h-4 w-4" />
