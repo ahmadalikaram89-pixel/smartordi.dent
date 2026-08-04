@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Upload, Trash2, X, ImageOff, FileText } from 'lucide-react'
+import { ArrowLeft, Upload, Trash2, X, FolderOpen, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import toast from '../../lib/toast'
@@ -15,7 +15,15 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 const CATEGORIES = {
   xray: { label: 'Röntgenbild', tone: 'info' },
   photo: { label: 'Foto', tone: 'success' },
+  document: { label: 'Dokument', tone: 'warning' },
   other: { label: 'Sonstiges', tone: 'neutral' },
+}
+
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic']
+
+function isImageFile(fileName) {
+  const lower = fileName.toLowerCase()
+  return IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))
 }
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15 MB
@@ -23,6 +31,7 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15 MB
 export default function PatientImages() {
   const { id } = useParams()
   const { clinicId, user } = useAuth()
+  const [patient, setPatient] = useState(null)
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('xray')
@@ -32,29 +41,39 @@ export default function PatientImages() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    if (clinicId) loadImages()
+    if (clinicId) loadData()
   }, [clinicId, id])
 
-  async function loadImages() {
+  async function loadData() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('patient_images')
-      .select('*')
-      .eq('patient_id', id)
-      .order('uploaded_at', { ascending: false })
 
-    if (error) {
-      toast.error('Fehler beim Laden der Bilder: ' + error.message)
+    const [patientRes, filesRes] = await Promise.all([
+      supabase.from('patients').select('full_name').eq('id', id).single(),
+      supabase
+        .from('patient_images')
+        .select('*')
+        .eq('patient_id', id)
+        .order('uploaded_at', { ascending: false }),
+    ])
+
+    if (patientRes.error) {
+      toast.error('Fehler beim Laden des Patienten: ' + patientRes.error.message)
+    } else {
+      setPatient(patientRes.data)
+    }
+
+    if (filesRes.error) {
+      toast.error('Fehler beim Laden der Dateien: ' + filesRes.error.message)
       setLoading(false)
       return
     }
 
     const withUrls = await Promise.all(
-      (data ?? []).map(async (img) => {
+      (filesRes.data ?? []).map(async (file) => {
         const { data: signed } = await supabase.storage
           .from('patient-images')
-          .createSignedUrl(img.storage_path, 3600)
-        return { ...img, url: signed?.signedUrl }
+          .createSignedUrl(file.storage_path, 3600)
+        return { ...file, url: signed?.signedUrl }
       })
     )
 
@@ -112,7 +131,7 @@ export default function PatientImages() {
       .createSignedUrl(storagePath, 3600)
 
     setImages((list) => [{ ...data, url: signed?.signedUrl }, ...list])
-    toast.success('Bild hochgeladen.')
+    toast.success('Datei hochgeladen.')
   }
 
   async function handleDelete() {
@@ -128,7 +147,7 @@ export default function PatientImages() {
       toast.error('Fehler beim Löschen: ' + error.message)
     } else {
       setImages((list) => list.filter((img) => img.id !== deleteTarget.id))
-      toast.success('Bild gelöscht.')
+      toast.success('Datei gelöscht.')
       setDeleteTarget(null)
     }
   }
@@ -136,7 +155,10 @@ export default function PatientImages() {
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Bilder & Röntgenaufnahmen</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Dateien</h1>
+          {patient && <p className="text-sm text-gray-500 mt-0.5">{patient.full_name}</p>}
+        </div>
         <Link
           to={`/patients/${id}`}
           className="flex items-center gap-1 text-sm text-gray-500 hover:underline"
@@ -147,7 +169,7 @@ export default function PatientImages() {
       </div>
 
       <Card className="p-6 mb-6">
-        <h3 className="font-semibold text-gray-800 mb-4">Bild hochladen</h3>
+        <h3 className="font-semibold text-gray-800 mb-4">Datei hochladen</h3>
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Kategorie</label>
@@ -166,29 +188,23 @@ export default function PatientImages() {
               <Upload className="h-4 w-4" />
               {uploading ? 'Hochladen...' : 'Datei auswählen'}
             </Button>
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              onChange={handleUpload}
-              disabled={uploading}
-              className="hidden"
-            />
+            <input type="file" onChange={handleUpload} disabled={uploading} className="hidden" />
           </label>
         </div>
         <p className="text-xs text-gray-400 mt-2">
-          Unterstützt Bilder und PDF-Dokumente, max. 15 MB.
+          Bilder, PDF, Word/Excel-Dokumente u.a., max. 15 MB.
         </p>
       </Card>
 
       {loading ? (
         <SkeletonList rows={2} />
       ) : images.length === 0 ? (
-        <EmptyState icon={ImageOff} title="Noch keine Bilder oder Röntgenaufnahmen" />
+        <EmptyState icon={FolderOpen} title="Noch keine Dateien vorhanden" />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {images.map((img) => {
             const meta = CATEGORIES[img.category] || CATEGORIES.other
-            const isImage = !img.file_name.toLowerCase().endsWith('.pdf')
+            const isImage = isImageFile(img.file_name)
             return (
               <div key={img.id} className="group relative">
                 <button
@@ -198,7 +214,12 @@ export default function PatientImages() {
                   {isImage && img.url ? (
                     <img src={img.url} alt={img.file_name} className="w-full h-full object-cover" />
                   ) : (
-                    <FileText className="h-8 w-8 text-gray-400" />
+                    <div className="flex flex-col items-center gap-1 px-2">
+                      <FileText className="h-8 w-8 text-gray-400" />
+                      <span className="text-[11px] text-gray-400 truncate max-w-full">
+                        {img.file_name}
+                      </span>
+                    </div>
                   )}
                 </button>
                 <div className="flex items-center justify-between mt-1.5">
@@ -243,7 +264,7 @@ export default function PatientImages() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Bild löschen?"
+        title="Datei löschen?"
         description={deleteTarget ? `"${deleteTarget.file_name}" wird endgültig gelöscht.` : ''}
         confirmLabel="Löschen"
         confirmVariant="danger"
