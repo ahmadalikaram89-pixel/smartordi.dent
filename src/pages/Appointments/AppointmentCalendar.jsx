@@ -50,7 +50,9 @@ export default function AppointmentCalendar() {
 
     const { data, error } = await supabase
       .from('appointments')
-      .select('id, start_time, end_time, status, notes, patients(full_name), user_profiles(full_name)')
+      .select(
+        'id, start_time, end_time, status, reason, notes, patients(full_name), user_profiles(full_name)'
+      )
       .eq('clinic_id', clinicId)
       .gte('start_time', day.toISOString())
       .lt('start_time', dayEnd.toISOString())
@@ -140,6 +142,7 @@ export default function AppointmentCalendar() {
                   </p>
                   <p className="text-sm text-gray-600">
                     {a.patients?.full_name} · Dr. {a.user_profiles?.full_name}
+                    {a.reason && <span className="text-gray-400"> · {a.reason}</span>}
                   </p>
                   {a.notes && <p className="text-xs text-gray-400 mt-1">{a.notes}</p>}
                 </div>
