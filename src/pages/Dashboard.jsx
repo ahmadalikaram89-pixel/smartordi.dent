@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, CalendarClock, Receipt, CalendarX2 } from 'lucide-react'
+import { Users, CalendarClock, Receipt, CalendarX2, ArrowRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import StatCard from '../components/ui/StatCard'
@@ -82,8 +82,12 @@ export default function Dashboard() {
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-800">Heutige Termine</h2>
-        <Link to="/appointments" className="text-sm text-primary-700 hover:underline">
-          Alle Termine →
+        <Link
+          to="/appointments"
+          className="flex items-center gap-1 text-sm text-primary-700 hover:underline"
+        >
+          Alle Termine
+          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
